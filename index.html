@@ -1,0 +1,281 @@
+<html>
+<header>
+    <link rel="shortcut icon" href="favicon.ico" />
+    <title>Standup Helper</title>
+    <style>
+        html {
+            box-sizing: border-box;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: inherit;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family:
+                -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans,
+                Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            line-height: 1.4;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-left: 10px;
+            padding-right: 10px;
+            color: #333;
+            height: 90vh;
+            margin-top: 5vh;
+            margin-bottom: 5vh;
+            overflow-y: auto;
+        }
+
+        .app-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 50px;
+            opacity: 0.5;
+        }
+
+        svg {
+            width: 64px;
+            height: 64px;
+        }
+
+        .standupMembers-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .standupMembers-item {
+            margin-bottom: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .standupMembers-item span {
+            flex-grow: 1;
+            margin-left: 10px;
+            margin-right: 10px;
+            font-size: 22px;
+        }
+
+        .done span {
+            text-decoration: line-through;
+        }
+
+        input[type="checkbox"] {
+            display: none;
+        }
+
+        .tick {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .tick::before {
+            content: '✓';
+            font-size: 20px;
+            display: none;
+        }
+
+        .done .tick::before {
+            display: inline;
+        }
+
+        .delete-standupMembers {
+            border: none;
+            background-color: transparent;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .delete-standupMembers svg {
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+        }
+
+        form {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 3px solid #333;
+        }
+
+        /* Add this below all the other styles */
+
+        .empty-state {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            display: none;
+        }
+
+        .checklist-icon {
+            margin-bottom: 20px;
+        }
+
+        .empty-state__title,
+        .empty-state__description {
+            margin-bottom: 20px;
+        }
+
+        /* Add this below the other styles */
+        .standupMembers-list:empty {
+            display: none;
+        }
+
+        .standupMembers-list:empty+.empty-state {
+            display: flex;
+        }
+    </style>
+</header>
+
+<body>
+    <div class="container">
+        <h1 class="app-title">Standup Helper</h1>
+        <ul class="standupMembers-list js-standupMembers-list"></ul>
+        <!-- end -->
+        <form class="js-form">
+            <input autofocus type="text" aria-label="Enter a new standup member" placeholder="Phil"
+                class="js-standupMembers-input">
+            <button id="resetButton">Reset</button>
+        </form>
+    </div>
+</body>
+
+<svg>
+    <defs>
+        <symbol id="delete-icon" viewBox="0 0 448 448">
+            <path
+                d="m224 0c-123.710938 0-224 100.289062-224 224s100.289062 224 224 224 224-100.289062 224-224c-.132812-123.65625-100.34375-223.867188-224-224zm124.449219 325.824219c4.15625 4.015625 5.828125 9.964843 4.363281 15.558593s-5.835938 9.964844-11.429688 11.429688-11.542968-.207031-15.558593-4.363281l-101.824219-101.824219-101.824219 101.824219c-6.277343 6.0625-16.257812 5.976562-22.429687-.195313s-6.257813-16.152344-.195313-22.429687l101.824219-101.824219-101.824219-101.824219c-4.15625-4.015625-5.828125-9.964843-4.363281-15.558593s5.835938-9.964844 11.429688-11.429688 11.542968.207031 15.558593 4.363281l101.824219 101.824219 101.824219-101.824219c6.277343-6.0625 16.257812-5.976562 22.429687.195313s6.257813 16.152344.195313 22.429687l-101.824219 101.824219zm0 0"
+                fill="#D80027" />
+        </symbol>
+    </defs>
+</svg>
+
+<script>
+    let standupMembersItems = [];
+
+    function renderstandupMembers(standupMembers) {
+        localStorage.setItem('standupMembersItems', JSON.stringify(standupMembersItems));
+
+        const list = document.querySelector('.js-standupMembers-list');
+        const item = document.querySelector(`[data-key='${standupMembers.id}']`);
+
+        if (standupMembers.deleted) {
+            item.remove();
+            if (standupMembersItems.length === 0) list.innerHTML = '';
+            return
+        }
+
+        const isChecked = standupMembers.checked ? 'done' : '';
+        const node = document.createElement("li");
+        node.setAttribute('class', `standupMembers-item ${isChecked}`);
+        node.setAttribute('data-key', standupMembers.id);
+        node.innerHTML = `
+    <input id="${standupMembers.id}" type="checkbox"/>
+    <label for="${standupMembers.id}" class="tick js-tick"></label>
+    <span>${standupMembers.text}</span>
+    <button class="delete-standupMembers js-delete-standupMembers">
+    <svg><use href="#delete-icon"></use></svg>
+    </button>
+  `;
+
+        if (item) {
+            list.replaceChild(node, item);
+        } else {
+            list.append(node);
+        }
+    }
+
+    function addstandupMembers(text) {
+        const standupMembers = {
+            text,
+            checked: false,
+            id: Date.now(),
+        };
+
+        standupMembersItems.push(standupMembers);
+        renderstandupMembers(standupMembers);
+    }
+
+    function toggleDone(key) {
+        const index = standupMembersItems.findIndex(item => item.id === Number(key));
+        standupMembersItems[index].checked = !standupMembersItems[index].checked;
+        renderstandupMembers(standupMembersItems[index]);
+    }
+
+    function deletestandupMembers(key) {
+        const index = standupMembersItems.findIndex(item => item.id === Number(key));
+        const standupMembers = {
+            deleted: true,
+            ...standupMembersItems[index]
+        };
+        standupMembersItems = standupMembersItems.filter(item => item.id !== Number(key));
+        renderstandupMembers(standupMembers);
+    }
+
+    const form = document.querySelector('.js-form');
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const input = document.querySelector('.js-standupMembers-input');
+
+        const text = input.value.trim();
+        if (text !== '') {
+            addstandupMembers(text);
+            input.value = '';
+            input.focus();
+        }
+    });
+
+    const list = document.querySelector('.js-standupMembers-list');
+    list.addEventListener('click', event => {
+        if (event.target.classList.contains('js-tick')) {
+            const itemKey = event.target.parentElement.dataset.key;
+            toggleDone(itemKey);
+        }
+
+        if (event.target.classList.contains('js-delete-standupMembers')) {
+            const itemKey = event.target.parentElement.dataset.key;
+            deletestandupMembers(itemKey);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const ref = localStorage.getItem('standupMembersItems');
+        if (ref) {
+            standupMembersItems = JSON.parse(ref);
+            standupMembersItems.forEach(t => {
+                renderstandupMembers(t);
+            });
+        }
+    });
+
+    document.getElementById('resetButton').onclick = function () {
+        standupMembersItems = standupMembersItems.map(x => ({ ...x, checked: false }));
+        standupMembersItems.forEach(x => renderstandupMembers(x));
+    }
+</script>
+
+</html>
